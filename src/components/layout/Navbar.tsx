@@ -53,7 +53,7 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href={homeHref} className="font-bold text-lg leading-tight flex-shrink-0">
-            <span className="text-[#c8dece]">אושרי הרץ</span>
+            <span className="text-[#c8dece]">אושרי הרץ - נטורופתית N.D</span>
             <br />
             <span className="text-xs font-normal opacity-80">רפואה משלימה</span>
           </Link>
