@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
@@ -568,9 +569,18 @@ export default function AdminClient({ days, patientActivity, totalPatients, noti
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#4a7c59]">ממשק אדמין 🛠️</h1>
-        <p className="text-gray-500 text-sm mt-1">ניהול מתקדם של האפליקציה</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#4a7c59]">ממשק אדמין 🛠️</h1>
+          <p className="text-gray-500 text-sm mt-1">ניהול מתקדם של האפליקציה</p>
+        </div>
+        <Link
+          href="/therapist"
+          className="flex items-center gap-1.5 text-sm text-[#4a7c59] font-medium bg-white border border-[#c8dece] hover:bg-[#f5f0e8] px-4 py-2 rounded-lg transition-colors"
+        >
+          <span>←</span>
+          <span>חזרה לאפליקציה</span>
+        </Link>
       </div>
 
       {/* Tabs */}
