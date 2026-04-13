@@ -52,11 +52,25 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="https://linktr.ee/oshrihertz" target="_blank" rel="noopener noreferrer" className="font-bold text-lg leading-tight flex-shrink-0">
-            <span className="text-[#c8dece]">אושרי הרץ - נטורופתית N.D</span>
-            <br />
-            <span className="text-xs font-normal opacity-80">רפואה משלימה</span>
-          </a>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link href={homeHref} className="font-bold text-lg leading-tight">
+              <span className="text-[#c8dece]">אושרי הרץ - נטורופתית N.D</span>
+              <br />
+              <span className="text-xs font-normal opacity-80">רפואה משלימה</span>
+            </Link>
+            <a
+              href="https://linktr.ee/oshrihertz"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="קישורים חברתיים"
+              className="opacity-50 hover:opacity-90 transition-opacity mt-0.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </a>
+          </div>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
