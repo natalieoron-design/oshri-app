@@ -8,15 +8,17 @@ import { cn } from '@/lib/utils'
 
 interface NavbarProps {
   profile: Profile
+  patientViewMode?: boolean
 }
 
-export default function Navbar({ profile }: NavbarProps) {
+export default function Navbar({ profile, patientViewMode = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
 
   const isTherapist = profile.role === 'therapist'
+  // Show patient nav when: actual patient OR therapist in patient-view mode
+  const showPatientNav = !isTherapist || patientViewMode
 
   const patientLinks = [
     { href: '/dashboard', label: 'דף הבית' },
@@ -35,32 +37,35 @@ export default function Navbar({ profile }: NavbarProps) {
     { href: '/therapist/shop', label: 'חנות' },
   ]
 
-  const links = isTherapist ? therapistLinks : patientLinks
+  const links = showPatientNav ? patientLinks : therapistLinks
 
   const handleLogout = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/auth/login')
   }
+
+  const homeHref = showPatientNav ? '/dashboard' : '/therapist'
 
   return (
     <nav className="bg-[#4a7c59] text-white shadow-md">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={isTherapist ? '/therapist' : '/dashboard'} className="font-bold text-lg leading-tight">
+          <Link href={homeHref} className="font-bold text-lg leading-tight flex-shrink-0">
             <span className="text-[#c8dece]">אושרי הרץ</span>
             <br />
             <span className="text-xs font-normal opacity-80">רפואה משלימה</span>
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {links.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
                   pathname === link.href || pathname.startsWith(link.href + '/')
                     ? 'bg-white/20 text-white'
                     : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -71,9 +76,33 @@ export default function Navbar({ profile }: NavbarProps) {
             ))}
           </div>
 
-          {/* User */}
-          <div className="flex items-center gap-3">
-            <span className="hidden md:block text-sm text-white/80">{profile.full_name}</span>
+          {/* Right side actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Patient view toggle — only for therapist */}
+            {isTherapist && (
+              patientViewMode ? (
+                <Link
+                  href="/api/set-view-mode?mode=therapist"
+                  className="hidden md:flex items-center gap-1.5 text-xs bg-white text-[#4a7c59] font-semibold px-3 py-1.5 rounded-lg hover:bg-[#c8dece] transition-colors"
+                >
+                  <span>🔙</span>
+                  <span>חזרי למצב מטפלת</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/api/set-view-mode?mode=patient"
+                  className="hidden md:flex items-center gap-1.5 text-xs bg-white/15 hover:bg-white/25 text-white font-medium px-3 py-1.5 rounded-lg transition-colors border border-white/30"
+                >
+                  <span>👁️</span>
+                  <span>מצב מטופל</span>
+                </Link>
+              )
+            )}
+
+            <span className="hidden md:block text-sm text-white/70 max-w-[120px] truncate">
+              {profile.full_name}
+            </span>
+
             <button
               onClick={handleLogout}
               className="text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -111,9 +140,30 @@ export default function Navbar({ profile }: NavbarProps) {
                 {link.label}
               </Link>
             ))}
+
+            {/* Mobile view toggle */}
+            {isTherapist && (
+              <Link
+                href={patientViewMode ? '/api/set-view-mode?mode=therapist' : '/api/set-view-mode?mode=patient'}
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 transition-colors flex items-center gap-2"
+              >
+                <span>{patientViewMode ? '🔙 חזרי למצב מטפלת' : '👁️ עברי למצב מטופל'}</span>
+              </Link>
+            )}
           </div>
         )}
       </div>
+
+      {/* Patient view banner */}
+      {isTherapist && patientViewMode && (
+        <div className="bg-amber-500 text-white text-xs text-center py-1.5 font-medium">
+          👁️ את צופה באפליקציה כמטופלת —{' '}
+          <Link href="/api/set-view-mode?mode=therapist" className="underline font-bold hover:text-amber-100">
+            לחצי כאן לחזרה למצב מטפלת
+          </Link>
+        </div>
+      )}
     </nav>
   )
 }
