@@ -35,7 +35,6 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
     { href: '/therapist/insights', label: 'תובנות AI' },
     { href: '/therapist/messages', label: 'הודעות' },
     { href: '/therapist/shop', label: 'חנות' },
-    { href: '/admin', label: 'אדמין' },
   ]
 
   const links = showPatientNav ? patientLinks : therapistLinks
@@ -114,6 +113,22 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
               )
             )}
 
+            {/* Admin button — therapist only, not in patient view mode */}
+            {isTherapist && !patientViewMode && (
+              <Link
+                href="/admin"
+                className={cn(
+                  'hidden md:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors',
+                  pathname === '/admin' || pathname.startsWith('/admin/')
+                    ? 'bg-white text-[#4a7c59]'
+                    : 'bg-white/15 hover:bg-white/25 text-white border border-white/30'
+                )}
+              >
+                <span>🛠️</span>
+                <span>אדמין</span>
+              </Link>
+            )}
+
             <span className="hidden md:block text-sm text-white/70 max-w-[120px] truncate">
               {profile.full_name}
             </span>
@@ -155,6 +170,17 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
                 {link.label}
               </Link>
             ))}
+
+            {/* Mobile admin button */}
+            {isTherapist && !patientViewMode && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 px-3 py-2 rounded-lg text-sm font-semibold bg-white/15 text-white hover:bg-white/25 transition-colors flex items-center gap-2 border border-white/30"
+              >
+                <span>🛠️ אדמין</span>
+              </Link>
+            )}
 
             {/* Mobile view toggle */}
             {isTherapist && (
