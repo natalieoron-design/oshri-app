@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --green: #4a7c59;
+  --light-green: #6a9e78;
+  --pale-green: #c8dece;
+  --cream: #f5f0e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  font-family: 'Assistant', sans-serif;
+  background-color: #f5f0e8;
+  color: #2d3748;
+  direction: rtl;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #c8dece;
+}
+::-webkit-scrollbar-thumb {
+  background: #6a9e78;
+  border-radius: 3px;
+}
+
+/* Input RTL fixes */
+input, textarea, select {
+  font-family: 'Assistant', sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+/* Recharts RTL */
+.recharts-wrapper {
+  direction: ltr;
+}
