@@ -35,6 +35,7 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
     { href: '/therapist/insights', label: 'תובנות AI' },
     { href: '/therapist/messages', label: 'הודעות' },
     { href: '/therapist/shop', label: 'חנות' },
+    { href: '/admin', label: 'אדמין' },
   ]
 
   const links = showPatientNav ? patientLinks : therapistLinks
