@@ -52,11 +52,11 @@ export default function Navbar({ profile, patientViewMode = false }: NavbarProps
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={homeHref} className="font-bold text-lg leading-tight flex-shrink-0">
+          <a href="https://linktr.ee/oshrihertz" target="_blank" rel="noopener noreferrer" className="font-bold text-lg leading-tight flex-shrink-0">
             <span className="text-[#c8dece]">אושרי הרץ - נטורופתית N.D</span>
             <br />
             <span className="text-xs font-normal opacity-80">רפואה משלימה</span>
-          </Link>
+          </a>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
