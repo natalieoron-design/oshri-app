@@ -31,14 +31,41 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+
   const isPublicPath =
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/auth/')
+    pathname === '/' ||
+    pathname.startsWith('/auth/')
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
+  }
+
+  // Role-based routing: therapist trying to access patient pages
+  if (user) {
+    const isTherapist = user.user_metadata?.role === 'therapist'
+    const patientViewMode = request.cookies.get('patient_view_mode')?.value === '1'
+
+    const patientOnlyPaths = ['/diary', '/weight', '/recommendations', '/dashboard', '/messages', '/shop']
+    const isPatientPath = patientOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
+
+    // Therapist accessing patient pages without patient-view-mode cookie → send to therapist dashboard
+    if (isTherapist && isPatientPath && !patientViewMode) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/therapist'
+      return NextResponse.redirect(url)
+    }
+
+    // Patient (or therapist in patient-view-mode) trying to access therapist pages → send to patient dashboard
+    const therapistOnlyPaths = ['/therapist', '/admin']
+    const isTherapistPath = therapistOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
+    if (!isTherapist && isTherapistPath) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
