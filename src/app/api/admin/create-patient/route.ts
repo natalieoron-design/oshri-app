@@ -18,24 +18,27 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = createAdminClient()
+  const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/dashboard'
 
-  // 1. Create auth user (no password — link will be sent for setup)
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+  // 1. Invite user — creates account + sends email automatically with password-setup link
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
     email,
-    email_confirm: true,
-    user_metadata: { role: 'patient', full_name: fullName },
-  })
+    {
+      data: { role: 'patient', full_name: fullName },
+      redirectTo,
+    }
+  )
 
-  if (authError) {
-    const msg = authError.message.includes('already registered')
+  if (inviteError) {
+    const msg = inviteError.message.toLowerCase().includes('already')
       ? 'כתובת האימייל כבר רשומה במערכת'
-      : authError.message
+      : inviteError.message
     return NextResponse.json({ error: msg }, { status: 400 })
   }
 
-  const patientId = authData.user.id
+  const patientId = inviteData.user.id
 
-  // 2. Upsert profile (trigger may have already created it)
+  // 2. Upsert profile with correct name and phone
   await admin.from('profiles').upsert({
     id: patientId,
     email,
@@ -45,44 +48,40 @@ export async function POST(req: NextRequest) {
     avatar_url: null,
   }, { onConflict: 'id' })
 
-  // 3. Create patient_details linked to this therapist
-  // Build notes from optional fields until migration adds dedicated columns
+  // 3. Build notes from optional fields (date_of_birth column added via migration)
   const noteParts: string[] = []
   if (dateOfBirth) noteParts.push(`תאריך לידה: ${dateOfBirth}`)
   if (treatmentGoals) noteParts.push(`מטרות טיפול: ${treatmentGoals}`)
 
-  const { error: detailsError } = await admin.from('patient_details').insert({
+  // Try inserting with date_of_birth column; fall back without it if migration not yet run
+  let detailsError = null
+  const baseDetails = {
     patient_id: patientId,
     therapist_id: user.id,
     daily_water_goal: 8,
     daily_calorie_goal: 1800,
     notes: noteParts.length > 0 ? noteParts.join('\n') : null,
-  })
+  }
+
+  const withDateCol = dateOfBirth
+    ? { ...baseDetails, date_of_birth: dateOfBirth, notes: treatmentGoals || null }
+    : baseDetails
+
+  const res1 = await admin.from('patient_details').insert(withDateCol)
+  if (res1.error) {
+    // Column may not exist yet — retry without it
+    if (res1.error.message.includes('date_of_birth') || res1.error.message.includes('schema cache')) {
+      const res2 = await admin.from('patient_details').insert(baseDetails)
+      detailsError = res2.error
+    } else {
+      detailsError = res1.error
+    }
+  }
 
   if (detailsError) {
-    // Rollback: delete the created auth user
     await admin.auth.admin.deleteUser(patientId)
     return NextResponse.json({ error: 'שגיאה ביצירת פרופיל מטופל: ' + detailsError.message }, { status: 500 })
   }
 
-  // 4. Generate password-setup link (recovery type)
-  const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/dashboard'
-  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-    type: 'recovery',
-    email,
-    options: { redirectTo },
-  })
-
-  if (linkError) {
-    return NextResponse.json({
-      userId: patientId,
-      link: null,
-      warning: 'המטופל נוצר אך לא ניתן ליצור קישור: ' + linkError.message,
-    })
-  }
-
-  return NextResponse.json({
-    userId: patientId,
-    link: linkData.properties.action_link,
-  })
+  return NextResponse.json({ userId: patientId, emailSent: true })
 }

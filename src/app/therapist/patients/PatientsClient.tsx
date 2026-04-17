@@ -32,8 +32,8 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [creating, setCreating] = useState(false)
-  const [createdLink, setCreatedLink] = useState<string | null>(null)
   const [createdName, setCreatedName] = useState('')
+  const [createdEmail, setCreatedEmail] = useState('')
 
   // Patient settings modal
   const [selectedPatient, setSelectedPatient] = useState<Profile | null>(null)
@@ -73,12 +73,11 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
         showToast(data.error ?? 'שגיאה ביצירת מטופל', 'error')
         return
       }
-      setCreatedLink(data.link)
       setCreatedName(form.fullName)
+      setCreatedEmail(form.email)
       setForm(emptyForm)
-      showToast(`${form.fullName} נוצר/ה בהצלחה!`, 'success')
-      // Refresh the page to show the new patient
-      setTimeout(() => window.location.reload(), 1500)
+      showToast(`${form.fullName} נוצר/ה — אימייל נשלח!`, 'success')
+      setTimeout(() => window.location.reload(), 3000)
     } catch {
       showToast('שגיאת רשת', 'error')
     } finally {
@@ -128,7 +127,7 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#4a7c59]">מטופלים 👥</h1>
-        <Button onClick={() => { setShowForm(s => !s); setCreatedLink(null) }} variant="outline">
+        <Button onClick={() => { setShowForm(s => !s); setCreatedName('') }} variant="outline">
           {showForm ? 'סגור' : '+ הוסף מטופל'}
         </Button>
       </div>
@@ -138,32 +137,19 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
         <Card className="border-[#4a7c59]/40 border-2">
           <CardHeader><CardTitle>הוספת מטופל חדש</CardTitle></CardHeader>
 
-          {createdLink ? (
-            /* Success state — show the setup link */
+          {createdName ? (
+            /* Success state — email was sent automatically */
             <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <p className="text-green-700 font-semibold mb-1">✅ {createdName} נוצר/ה בהצלחה!</p>
-                <p className="text-green-600 text-sm">שלח/י את הקישור הבא למטופל להגדרת סיסמה:</p>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
+                <div className="text-3xl mb-2">📧</div>
+                <p className="text-green-700 font-semibold text-lg">{createdName} נוסף/ה בהצלחה!</p>
+                <p className="text-green-600 text-sm mt-1">
+                  אימייל עם קישור להגדרת סיסמה נשלח אוטומטית אל
+                </p>
+                <p className="text-green-700 font-medium text-sm mt-0.5">{createdEmail}</p>
+                <p className="text-gray-400 text-xs mt-3">הדף יתרענן אוטומטית...</p>
               </div>
-              <div className="bg-[#f5f0e8] rounded-xl p-3">
-                <p className="text-xs text-gray-500 mb-2 font-medium">קישור הגדרת סיסמה:</p>
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    value={createdLink}
-                    className="flex-1 bg-white border border-[#c8dece] rounded-lg px-3 py-2 text-xs text-gray-600 min-w-0"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => { navigator.clipboard.writeText(createdLink); showToast('הועתק!', 'success') }}
-                  >
-                    העתק
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-400 mt-2">הקישור בתוקף ל-24 שעות. לאחר לחיצה המטופל יגדיר סיסמה וייכנס ישירות למערכת.</p>
-              </div>
-              <Button variant="outline" onClick={() => { setCreatedLink(null); setShowForm(false) }}>
+              <Button variant="outline" onClick={() => { setCreatedName(''); setShowForm(false) }}>
                 סגור
               </Button>
             </div>
