@@ -19,6 +19,9 @@ export interface PatientDetails {
   daily_water_goal: number
   daily_calorie_goal: number
   notes: string | null
+  phone: string | null
+  date_of_birth: string | null
+  treatment_goals: string | null
 }
 
 export interface FoodEntry {

@@ -17,11 +17,25 @@ interface Props {
   details: PatientDetails[]
 }
 
+const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+
+const emptyForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  dateOfBirth: '',
+  treatmentGoals: '',
+}
+
 export default function PatientsClient({ therapistId, patients, todayLoggers, weekWeighters, details }: Props) {
-  const [showInvite, setShowInvite] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLink, setInviteLink] = useState('')
-  const [inviteLoading, setInviteLoading] = useState(false)
+  // New patient form
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState(emptyForm)
+  const [creating, setCreating] = useState(false)
+  const [createdLink, setCreatedLink] = useState<string | null>(null)
+  const [createdName, setCreatedName] = useState('')
+
+  // Patient settings modal
   const [selectedPatient, setSelectedPatient] = useState<Profile | null>(null)
   const [showPatientModal, setShowPatientModal] = useState(false)
   const [goalWeight, setGoalWeight] = useState('')
@@ -30,33 +44,52 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
   const [waterGoal, setWaterGoal] = useState('8')
   const [patientNotes, setPatientNotes] = useState('')
   const [saveLoading, setSaveLoading] = useState(false)
+
   const { showToast } = useToast()
   const supabase = createClient()
 
   const todaySet = new Set(todayLoggers)
   const weekSet = new Set(weekWeighters)
 
-  const handleInvite = async () => {
-    if (!inviteEmail) return
-    setInviteLoading(true)
+  // ── Create patient ──────────────────────────────────────────────────────────
+  const handleCreatePatient = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.fullName || !form.email) return
+    setCreating(true)
     try {
-      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-      const { error } = await supabase.from('invite_tokens').insert({
-        token,
-        email: inviteEmail,
-        therapist_id: therapistId,
+      const res = await fetch('/api/admin/create-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone || null,
+          dateOfBirth: form.dateOfBirth || null,
+          treatmentGoals: form.treatmentGoals || null,
+        }),
       })
-      if (error) throw error
-      const link = `${window.location.origin}/auth/invite?token=${token}`
-      setInviteLink(link)
-      showToast('קישור הזמנה נוצר', 'success')
+      const data = await res.json()
+      if (!res.ok) {
+        showToast(data.error ?? 'שגיאה ביצירת מטופל', 'error')
+        return
+      }
+      setCreatedLink(data.link)
+      setCreatedName(form.fullName)
+      setForm(emptyForm)
+      showToast(`${form.fullName} נוצר/ה בהצלחה!`, 'success')
+      // Refresh the page to show the new patient
+      setTimeout(() => window.location.reload(), 1500)
     } catch {
-      showToast('שגיאה ביצירת קישור', 'error')
+      showToast('שגיאת רשת', 'error')
     } finally {
-      setInviteLoading(false)
+      setCreating(false)
     }
   }
 
+  const field = (key: keyof typeof form, value: string) =>
+    setForm(f => ({ ...f, [key]: value }))
+
+  // ── Patient settings modal ──────────────────────────────────────────────────
   const openPatientModal = (patient: Profile) => {
     const detail = details.find(d => d.patient_id === patient.id)
     setSelectedPatient(patient)
@@ -90,75 +123,126 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     }
   }
 
-  const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#4a7c59]">מטופלים 👥</h1>
-        <Button onClick={() => setShowInvite(!showInvite)} variant="outline">
-          ✉️ הזמן מטופל
+        <Button onClick={() => { setShowForm(s => !s); setCreatedLink(null) }} variant="outline">
+          {showForm ? 'סגור' : '+ הוסף מטופל'}
         </Button>
       </div>
 
-      {/* Invite panel */}
-      {showInvite && (
-        <Card className="border-[#4a7c59]/30 border-2">
-          <CardHeader><CardTitle>הזמנת מטופל חדש</CardTitle></CardHeader>
-          <div className="flex gap-3">
-            <Input
-              type="email"
-              value={inviteEmail}
-              onChange={e => setInviteEmail(e.target.value)}
-              placeholder="כתובת אימייל של המטופל"
-              className="flex-1"
-            />
-            <Button onClick={handleInvite} loading={inviteLoading}>צור קישור</Button>
-          </div>
-          {inviteLink && (
-            <div className="mt-4 bg-[#c8dece]/30 rounded-xl p-4">
-              <p className="text-sm font-medium text-[#4a7c59] mb-2">קישור ההזמנה:</p>
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={inviteLink}
-                  className="flex-1 bg-white border border-[#c8dece] rounded-lg px-3 py-2 text-sm text-gray-600"
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => { navigator.clipboard.writeText(inviteLink); showToast('הועתק!', 'success') }}
-                >
-                  העתק
-                </Button>
+      {/* ── New patient form ── */}
+      {showForm && (
+        <Card className="border-[#4a7c59]/40 border-2">
+          <CardHeader><CardTitle>הוספת מטופל חדש</CardTitle></CardHeader>
+
+          {createdLink ? (
+            /* Success state — show the setup link */
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <p className="text-green-700 font-semibold mb-1">✅ {createdName} נוצר/ה בהצלחה!</p>
+                <p className="text-green-600 text-sm">שלח/י את הקישור הבא למטופל להגדרת סיסמה:</p>
               </div>
+              <div className="bg-[#f5f0e8] rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-2 font-medium">קישור הגדרת סיסמה:</p>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={createdLink}
+                    className="flex-1 bg-white border border-[#c8dece] rounded-lg px-3 py-2 text-xs text-gray-600 min-w-0"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => { navigator.clipboard.writeText(createdLink); showToast('הועתק!', 'success') }}
+                  >
+                    העתק
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">הקישור בתוקף ל-24 שעות. לאחר לחיצה המטופל יגדיר סיסמה וייכנס ישירות למערכת.</p>
+              </div>
+              <Button variant="outline" onClick={() => { setCreatedLink(null); setShowForm(false) }}>
+                סגור
+              </Button>
             </div>
+          ) : (
+            /* Form */
+            <form onSubmit={handleCreatePatient} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="שם מלא *"
+                  type="text"
+                  value={form.fullName}
+                  onChange={e => field('fullName', e.target.value)}
+                  placeholder="ישראל ישראלי"
+                  required
+                />
+                <Input
+                  label="אימייל *"
+                  type="email"
+                  value={form.email}
+                  onChange={e => field('email', e.target.value)}
+                  placeholder="patient@email.com"
+                  required
+                />
+                <Input
+                  label="טלפון"
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => field('phone', e.target.value)}
+                  placeholder="050-0000000"
+                />
+                <Input
+                  label="תאריך לידה"
+                  type="date"
+                  value={form.dateOfBirth}
+                  onChange={e => field('dateOfBirth', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">מטרות טיפול</label>
+                <textarea
+                  value={form.treatmentGoals}
+                  onChange={e => field('treatmentGoals', e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#4a7c59] resize-none h-24 text-sm"
+                  placeholder="לדוגמה: ירידה במשקל, שיפור אנרגיה, ויסות סוכר..."
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" loading={creating} disabled={!form.fullName || !form.email}>
+                  {creating ? 'יוצר מטופל...' : 'צור מטופל ושלח קישור'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>ביטול</Button>
+              </div>
+            </form>
           )}
         </Card>
       )}
 
-      {/* Patients list */}
+      {/* ── Patients list ── */}
       <div className="space-y-3">
         {patients.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <div className="text-4xl mb-3">👥</div>
             <p>אין מטופלים עדיין</p>
-            <p className="text-sm mt-1">שלח קישור הזמנה כדי להוסיף מטופלים</p>
+            <p className="text-sm mt-1">לחצ/י על "הוסף מטופל" כדי להתחיל</p>
           </div>
         ) : (
           patients.map(patient => (
             <Card key={patient.id}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#c8dece] rounded-full flex items-center justify-center text-[#4a7c59] font-bold">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-[#c8dece] rounded-full flex items-center justify-center text-[#4a7c59] font-bold flex-shrink-0">
                     {patient.full_name?.[0] ?? '?'}
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{patient.full_name}</h3>
-                    <p className="text-xs text-gray-400">{patient.email}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-gray-800 truncate">{patient.full_name}</h3>
+                    <p className="text-xs text-gray-400 truncate">{patient.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {todaySet.has(patient.id)
                     ? <Badge variant="green">רשם היום</Badge>
                     : <Badge variant="yellow">לא רשם</Badge>
@@ -180,13 +264,13 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
         )}
       </div>
 
-      {/* Patient Settings Modal */}
+      {/* ── Patient settings modal ── */}
       {showPatientModal && selectedPatient && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-[#4a7c59]">הגדרות - {selectedPatient.full_name}</h2>
-              <button onClick={() => setShowPatientModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+              <h2 className="text-lg font-bold text-[#4a7c59]">הגדרות — {selectedPatient.full_name}</h2>
+              <button onClick={() => setShowPatientModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
             </div>
             <div className="space-y-4">
               <Input
@@ -204,9 +288,7 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
                   onChange={e => setWeighInDay(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4a7c59]"
                 >
-                  {DAYS.map((day, i) => (
-                    <option key={i} value={i}>{day}</option>
-                  ))}
+                  {DAYS.map((day, i) => <option key={i} value={i}>{day}</option>)}
                 </select>
               </div>
               <Input
