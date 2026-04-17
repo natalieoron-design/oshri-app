@@ -46,14 +46,17 @@ export async function POST(req: NextRequest) {
   }, { onConflict: 'id' })
 
   // 3. Create patient_details linked to this therapist
+  // Build notes from optional fields until migration adds dedicated columns
+  const noteParts: string[] = []
+  if (dateOfBirth) noteParts.push(`תאריך לידה: ${dateOfBirth}`)
+  if (treatmentGoals) noteParts.push(`מטרות טיפול: ${treatmentGoals}`)
+
   const { error: detailsError } = await admin.from('patient_details').insert({
     patient_id: patientId,
     therapist_id: user.id,
     daily_water_goal: 8,
     daily_calorie_goal: 1800,
-    phone: phone || null,
-    date_of_birth: dateOfBirth || null,
-    treatment_goals: treatmentGoals || null,
+    notes: noteParts.length > 0 ? noteParts.join('\n') : null,
   })
 
   if (detailsError) {
