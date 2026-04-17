@@ -16,8 +16,14 @@ export default async function TherapistDashboard() {
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
+  // Step 1: get all patient IDs from patient_details
+  const { data: patientDetailsData } = await supabase.from('patient_details').select('patient_id')
+  const patientIds = patientDetailsData?.map(r => r.patient_id) ?? []
+
   const [patientsRes, todayDiaryRes, weekWeightRes, pendingInsightsRes, unreadMsgRes, ordersRes] = await Promise.all([
-    supabase.from('patient_details').select('patient_id, profiles(*)'),
+    patientIds.length > 0
+      ? supabase.from('profiles').select('*').in('id', patientIds).order('full_name')
+      : Promise.resolve({ data: [] }),
     supabase.from('food_diary').select('patient_id').gte('logged_at', today + 'T00:00:00'),
     supabase.from('weight_logs').select('patient_id, weight, logged_at').gte('logged_at', weekAgo),
     supabase.from('ai_insights').select('*').eq('status', 'pending').order('generated_at', { ascending: false }),
@@ -25,7 +31,7 @@ export default async function TherapistDashboard() {
     supabase.from('orders').select('*, profiles(full_name)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
   ])
 
-  const patients = ((patientsRes.data ?? []).map((r: Record<string, unknown>) => r.profiles).filter(Boolean)) as import('@/lib/types').Profile[]
+  const patients = (patientsRes.data ?? []) as import('@/lib/types').Profile[]
   const todayLoggers = new Set(todayDiaryRes.data?.map(d => d.patient_id) ?? [])
   const weekWeighters = new Set(weekWeightRes.data?.map(w => w.patient_id) ?? [])
   const pendingInsights = pendingInsightsRes.data ?? []
