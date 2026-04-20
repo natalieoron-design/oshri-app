@@ -78,7 +78,7 @@
                 לחצי על הכפתור למטה כדי לבחור סיסמה ולהיכנס לאפליקציה:
               </p>
               <div style="text-align:center;margin:0 0 24px 0;">
-                <a href="{{ .ConfirmationURL }}"
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite"
                    style="display:inline-block;background-color:#4a7c59;color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:12px;text-decoration:none;letter-spacing:0.3px;">
                   בחרי סיסמה והתחילי ✨
                 </a>
@@ -87,7 +87,7 @@
                 הקישור בתוקף ל-24 שעות
               </p>
               <p style="font-size:11px;color:#c4ccc8;text-align:center;margin:0;word-break:break-all;">
-                או העתיקי את הקישור: {{ .ConfirmationURL }}
+                או העתיקי את הקישור: {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite
               </p>
 
             </td>
