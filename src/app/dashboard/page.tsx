@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -14,6 +15,8 @@ export default async function PatientDashboard() {
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
+  const admin = createAdminClient()
+
   const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes, goalsRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('weight_logs').select('*').eq('patient_id', user.id).order('logged_at', { ascending: false }).limit(5),
@@ -22,7 +25,7 @@ export default async function PatientDashboard() {
     supabase.from('messages').select('*').eq('recipient_id', user.id).eq('is_read', false),
     supabase.from('ai_insights').select('*').eq('patient_id', user.id).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
     supabase.from('patient_details').select('*').eq('patient_id', user.id).single(),
-    supabase.from('treatment_goals').select('*').eq('patient_id', user.id).order('created_at', { ascending: true }),
+    admin.from('treatment_goals').select('*').eq('patient_id', user.id).order('created_at', { ascending: true }),
   ])
 
   const profile = profileRes.data
