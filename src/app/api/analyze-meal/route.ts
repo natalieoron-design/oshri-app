@@ -54,14 +54,10 @@ Be realistic with estimates. If unsure, give moderate estimates. Always respond 
           },
         ],
       })
-    } else if (inputType === 'voice' && audioBase64) {
-      // For voice, we'll treat the base64 as a transcription request
-      // Since Anthropic doesn't support audio directly, use the description if available
-      prompt = `הנה הקלטת קול שתורגמה: "${description || 'ארוחה לא ידועה'}". נתח את הארוחה.`
-      messages.push({
-        role: 'user',
-        content: prompt,
-      })
+    } else if (inputType === 'voice' && description) {
+      // Voice is transcribed client-side via Web Speech API; description is the transcript
+      prompt = `המשתמש אמר בקול: "${description}". נתח את הארוחה שתיאר.`
+      messages.push({ role: 'user', content: prompt })
     } else {
       prompt = `נתח את הארוחה הבאה: "${description}"`
       messages.push({

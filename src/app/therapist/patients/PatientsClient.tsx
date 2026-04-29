@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, PatientDetails } from '@/lib/types'
+import { Profile, PatientDetails, TreatmentGoal, GOAL_CATEGORIES } from '@/lib/types'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -44,6 +44,12 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
   const [waterGoal, setWaterGoal] = useState('8')
   const [patientNotes, setPatientNotes] = useState('')
   const [saveLoading, setSaveLoading] = useState(false)
+
+  // Treatment goals state
+  const [goals, setGoals] = useState<TreatmentGoal[]>([])
+  const [newGoalText, setNewGoalText] = useState('')
+  const [newGoalCategory, setNewGoalCategory] = useState<string>(GOAL_CATEGORIES[0])
+  const [goalLoading, setGoalLoading] = useState(false)
 
   const { showToast } = useToast()
   const supabase = createClient()
@@ -89,7 +95,7 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     setForm(f => ({ ...f, [key]: value }))
 
   // ── Patient settings modal ──────────────────────────────────────────────────
-  const openPatientModal = (patient: Profile) => {
+  const openPatientModal = async (patient: Profile) => {
     const detail = details.find(d => d.patient_id === patient.id)
     setSelectedPatient(patient)
     setGoalWeight(detail?.goal_weight?.toString() ?? '')
@@ -97,7 +103,41 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     setCalorieGoal(detail?.daily_calorie_goal?.toString() ?? '2000')
     setWaterGoal(detail?.daily_water_goal?.toString() ?? '8')
     setPatientNotes(detail?.notes ?? '')
+    setNewGoalText('')
+    setNewGoalCategory(GOAL_CATEGORIES[0])
     setShowPatientModal(true)
+    // Load goals
+    const res = await fetch(`/api/treatment-goals?patient_id=${patient.id}`)
+    if (res.ok) setGoals(await res.json())
+  }
+
+  const addGoal = async () => {
+    if (!selectedPatient || !newGoalText.trim()) return
+    setGoalLoading(true)
+    try {
+      const res = await fetch('/api/treatment-goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: selectedPatient.id, goal_text: newGoalText, category: newGoalCategory }),
+      })
+      if (!res.ok) throw new Error()
+      const goal = await res.json()
+      setGoals(prev => [...prev, goal])
+      setNewGoalText('')
+      showToast('מטרה נוספה', 'success')
+    } catch {
+      showToast('שגיאה בהוספת מטרה', 'error')
+    } finally {
+      setGoalLoading(false)
+    }
+  }
+
+  const deleteGoal = async (id: string) => {
+    const res = await fetch(`/api/treatment-goals?id=${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setGoals(prev => prev.filter(g => g.id !== id))
+      showToast('מטרה הוסרה', 'info')
+    }
   }
 
   const savePatientDetails = async () => {
@@ -301,6 +341,48 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
                 />
               </div>
             </div>
+              {/* Treatment Goals */}
+              <div className="border-t border-gray-100 pt-4 mt-2">
+                <p className="text-sm font-semibold text-[#4a7c59] mb-3">מטרות טיפול</p>
+                {/* Existing goals */}
+                {goals.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {goals.map(goal => (
+                      <div key={goal.id} className="flex items-center justify-between bg-[#f5f0e8] rounded-lg px-3 py-2">
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-[#4a7c59] ml-2">{goal.category}</span>
+                          <span className="text-sm text-gray-700">{goal.goal_text}</span>
+                        </div>
+                        <button onClick={() => deleteGoal(goal.id)} className="text-gray-300 hover:text-red-400 transition-colors text-lg flex-shrink-0 mr-2">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Add goal */}
+                <div className="space-y-2">
+                  <select
+                    value={newGoalCategory}
+                    onChange={e => setNewGoalCategory(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#4a7c59] text-sm"
+                  >
+                    {GOAL_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newGoalText}
+                      onChange={e => setNewGoalText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addGoal()}
+                      placeholder="לדוגמה: ירידה של 5 ק&quot;ג ב-3 חודשים"
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#4a7c59] text-sm"
+                    />
+                    <Button onClick={addGoal} loading={goalLoading} disabled={!newGoalText.trim()} size="sm">
+                      + הוסף
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
             <div className="flex gap-3 mt-6">
               <Button onClick={savePatientDetails} loading={saveLoading} className="flex-1">שמור</Button>
               <Button variant="outline" onClick={() => setShowPatientModal(false)} className="flex-1">ביטול</Button>

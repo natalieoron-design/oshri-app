@@ -14,7 +14,7 @@ export default async function PatientDashboard() {
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
-  const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes] = await Promise.all([
+  const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes, goalsRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('weight_logs').select('*').eq('patient_id', user.id).order('logged_at', { ascending: false }).limit(5),
     supabase.from('food_diary').select('*').eq('patient_id', user.id).gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }),
@@ -22,6 +22,7 @@ export default async function PatientDashboard() {
     supabase.from('messages').select('*').eq('recipient_id', user.id).eq('is_read', false),
     supabase.from('ai_insights').select('*').eq('patient_id', user.id).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
     supabase.from('patient_details').select('*').eq('patient_id', user.id).single(),
+    supabase.from('treatment_goals').select('*').eq('patient_id', user.id).eq('is_active', true).order('created_at', { ascending: true }),
   ])
 
   const profile = profileRes.data
@@ -31,6 +32,7 @@ export default async function PatientDashboard() {
   const unreadMessages = messagesRes.data?.length ?? 0
   const insights = insightsRes.data ?? []
   const details = detailsRes.data
+  const goals = goalsRes.data ?? []
 
   // Weekly nutrition totals
   const todayEntries = diary.filter(e => e.logged_at.startsWith(today))
@@ -168,6 +170,26 @@ export default async function PatientDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* Treatment Goals */}
+      {goals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>המטרות שלי 🎯</CardTitle>
+          </CardHeader>
+          <div className="space-y-2">
+            {goals.map(goal => (
+              <div key={goal.id} className="flex items-start gap-3 bg-[#f5f0e8] rounded-xl px-4 py-3">
+                <div className="w-2 h-2 rounded-full bg-[#4a7c59] mt-1.5 flex-shrink-0" />
+                <div>
+                  <span className="text-xs font-semibold text-[#4a7c59] block mb-0.5">{goal.category}</span>
+                  <span className="text-sm text-gray-700">{goal.goal_text}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* AI Insights */}
       {insights.length > 0 && (

@@ -30,11 +30,12 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
   const [mealType, setMealType] = useState<FoodEntry['meal_type']>('lunch')
   const [loading, setLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [transcript, setTranscript] = useState('')
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const chunksRef = useRef<Blob[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
   const { showToast } = useToast()
   const supabase = createClient()
 
@@ -53,28 +54,46 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
     setPhotoPreview(url)
   }
 
-  const startRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const recorder = new MediaRecorder(stream)
-    chunksRef.current = []
-    recorder.ondataavailable = e => chunksRef.current.push(e.data)
-    recorder.start()
-    mediaRecorderRef.current = recorder
+  const startRecording = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognitionAPI) {
+      showToast('הדפדפן שלך אינו תומך בהקלטת קול. נסה/י Chrome.', 'error')
+      return
+    }
+
+    setTranscript('')
+    const recognition = new SpeechRecognitionAPI()
+    recognition.lang = 'he-IL'
+    recognition.continuous = true
+    recognition.interimResults = true
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      let text = ''
+      for (let i = 0; i < event.results.length; i++) {
+        text += event.results[i][0].transcript
+      }
+      setTranscript(text)
+    }
+
+    recognition.onerror = () => {
+      showToast('שגיאה בזיהוי קול — נסה/י שוב', 'error')
+      setIsRecording(false)
+    }
+
+    recognition.start()
+    recognitionRef.current = recognition
     setIsRecording(true)
   }
 
   const stopRecording = () => {
-    return new Promise<Blob>(resolve => {
-      const recorder = mediaRecorderRef.current
-      if (!recorder) return
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-        resolve(blob)
-        recorder.stream.getTracks().forEach(t => t.stop())
-      }
-      recorder.stop()
-      setIsRecording(false)
-    })
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setIsRecording(false)
   }
 
   const analyzeWithAI = async (payload: {
@@ -115,10 +134,14 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
           photoUrl = urlData.publicUrl
         }
       } else if (inputMode === 'voice') {
-        const blob = await stopRecording()
-        const base64 = await fileToBase64(new File([blob], 'voice.webm', { type: 'audio/webm' }))
-        aiResult = await analyzeWithAI({ audioBase64: base64, inputType: 'voice' })
-        finalDescription = aiResult.description as string || 'ארוחה מהקלטה'
+        stopRecording()
+        if (!transcript.trim()) {
+          showToast('לא זוהה קול — נסה/י שוב', 'error')
+          setLoading(false)
+          return
+        }
+        aiResult = await analyzeWithAI({ description: transcript, inputType: 'voice' })
+        finalDescription = aiResult.description as string || transcript
       } else {
         aiResult = await analyzeWithAI({ description, inputType: 'text' })
       }
@@ -324,21 +347,34 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
             )}
 
             {inputMode === 'voice' && (
-              <div className="text-center py-4">
+              <div className="py-4">
                 {isRecording ? (
                   <div className="space-y-3">
-                    <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                      <span className="text-2xl">🎤</span>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                        <span className="text-2xl">🎤</span>
+                      </div>
+                      <p className="text-sm text-gray-600">מקליט... אמור/י מה אכלת</p>
                     </div>
-                    <p className="text-sm text-gray-600">מקליט... לחץ כדי לעצור</p>
-                    <Button variant="danger" onClick={handleSubmit}>עצור ושלח</Button>
+                    {transcript ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 min-h-[48px] leading-relaxed">
+                        {transcript}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-400 text-center">
+                        ממתין לדיבור...
+                      </div>
+                    )}
+                    <Button variant="danger" onClick={handleSubmit} loading={loading} className="w-full">
+                      עצור ושלח לניתוח AI
+                    </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="w-16 h-16 bg-[#c8dece] rounded-full flex items-center justify-center mx-auto">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-[#c8dece] rounded-full flex items-center justify-center">
                       <span className="text-2xl">🎤</span>
                     </div>
-                    <p className="text-sm text-gray-600">לחץ להתחיל הקלטה</p>
+                    <p className="text-sm text-gray-600">לחץ/י להתחיל הקלטה ואמור/י מה אכלת</p>
                     <Button variant="secondary" onClick={startRecording}>התחל הקלטה</Button>
                   </div>
                 )}

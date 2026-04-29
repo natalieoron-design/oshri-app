@@ -134,4 +134,25 @@ export const RECOMMENDATION_TYPES = {
   general: 'כללי',
 } as const
 
+export interface TreatmentGoal {
+  id: string
+  patient_id: string
+  therapist_id: string
+  goal_text: string
+  category: string
+  is_active: boolean
+  created_at: string
+}
+
+export const GOAL_CATEGORIES = [
+  'תזונה',
+  'משקל',
+  'אנרגיה',
+  'עיכול',
+  'כוח ושרירים',
+  'שינה',
+  'רגשי ונפשי',
+  'כללי',
+] as const
+
 export const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
