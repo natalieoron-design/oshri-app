@@ -10,7 +10,9 @@ export async function GET(req: NextRequest) {
 
   const patientId = req.nextUrl.searchParams.get('patient_id') ?? user.id
 
-  const { data, error } = await supabase
+  // Use admin client to bypass RLS (table has RLS enabled with no permissive policy yet)
+  const admin = createAdminClient()
+  const { data, error } = await admin
     .from('treatment_goals')
     .select('*')
     .eq('patient_id', patientId)
