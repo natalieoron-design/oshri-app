@@ -137,10 +137,8 @@ export const RECOMMENDATION_TYPES = {
 export interface TreatmentGoal {
   id: string
   patient_id: string
-  therapist_id: string
   goal_text: string
   category: string
-  is_active: boolean
   created_at: string
 }
 

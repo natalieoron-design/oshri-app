@@ -14,11 +14,10 @@ export async function GET(req: NextRequest) {
     .from('treatment_goals')
     .select('*')
     .eq('patient_id', patientId)
-    .eq('is_active', true)
     .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  return NextResponse.json(data ?? [])
 }
 
 // POST /api/treatment-goals  { patient_id, goal_text, category }
@@ -34,12 +33,15 @@ export async function POST(req: NextRequest) {
   if (!patient_id || !goal_text) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { data, error } = await admin.from('treatment_goals').insert({
-    patient_id,
-    therapist_id: user.id,
-    goal_text: goal_text.trim(),
-    category: category || 'כללי',
-  }).select().single()
+  const { data, error } = await admin
+    .from('treatment_goals')
+    .insert({
+      patient_id,
+      goal_text: goal_text.trim(),
+      category: category || 'כללי',
+    })
+    .select()
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
@@ -55,7 +57,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const admin = createAdminClient()
-  const { error } = await admin.from('treatment_goals').update({ is_active: false }).eq('id', id)
+  const { error } = await admin.from('treatment_goals').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })

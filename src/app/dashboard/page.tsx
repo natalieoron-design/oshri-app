@@ -22,7 +22,7 @@ export default async function PatientDashboard() {
     supabase.from('messages').select('*').eq('recipient_id', user.id).eq('is_read', false),
     supabase.from('ai_insights').select('*').eq('patient_id', user.id).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
     supabase.from('patient_details').select('*').eq('patient_id', user.id).single(),
-    supabase.from('treatment_goals').select('*').eq('patient_id', user.id).eq('is_active', true).order('created_at', { ascending: true }),
+    supabase.from('treatment_goals').select('*').eq('patient_id', user.id).order('created_at', { ascending: true }),
   ])
 
   const profile = profileRes.data
