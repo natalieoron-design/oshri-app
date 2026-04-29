@@ -15,6 +15,7 @@ interface Props {
   todayLoggers: string[]
   weekWeighters: string[]
   details: PatientDetails[]
+  initialGoals: TreatmentGoal[]
 }
 
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
@@ -27,7 +28,9 @@ const emptyForm = {
   treatmentGoals: '',
 }
 
-export default function PatientsClient({ therapistId, patients, todayLoggers, weekWeighters, details }: Props) {
+export default function PatientsClient({ therapistId, patients, todayLoggers, weekWeighters, details, initialGoals }: Props) {
+  // all goals keyed by patient for quick lookup
+  const [allGoals, setAllGoals] = useState<TreatmentGoal[]>(initialGoals)
   // New patient form
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
@@ -95,7 +98,7 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     setForm(f => ({ ...f, [key]: value }))
 
   // ── Patient settings modal ──────────────────────────────────────────────────
-  const openPatientModal = async (patient: Profile) => {
+  const openPatientModal = (patient: Profile) => {
     const detail = details.find(d => d.patient_id === patient.id)
     setSelectedPatient(patient)
     setGoalWeight(detail?.goal_weight?.toString() ?? '')
@@ -105,10 +108,9 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     setPatientNotes(detail?.notes ?? '')
     setNewGoalText('')
     setNewGoalCategory(GOAL_CATEGORIES[0])
+    // Seed modal goals from the already-loaded allGoals
+    setGoals(allGoals.filter(g => g.patient_id === patient.id))
     setShowPatientModal(true)
-    // Load goals
-    const res = await fetch(`/api/treatment-goals?patient_id=${patient.id}`)
-    if (res.ok) setGoals(await res.json())
   }
 
   const addGoal = async () => {
@@ -120,13 +122,14 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ patient_id: selectedPatient.id, goal_text: newGoalText, category: newGoalCategory }),
       })
-      if (!res.ok) throw new Error()
-      const goal = await res.json()
-      setGoals(prev => [...prev, goal])
+      const data = await res.json()
+      if (!res.ok) { showToast(data.error ?? 'שגיאה בהוספת מטרה', 'error'); return }
+      setGoals(prev => [...prev, data])
+      setAllGoals(prev => [...prev, data])
       setNewGoalText('')
       showToast('מטרה נוספה', 'success')
     } catch {
-      showToast('שגיאה בהוספת מטרה', 'error')
+      showToast('שגיאת רשת', 'error')
     } finally {
       setGoalLoading(false)
     }
@@ -136,6 +139,7 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
     const res = await fetch(`/api/treatment-goals?id=${id}`, { method: 'DELETE' })
     if (res.ok) {
       setGoals(prev => prev.filter(g => g.id !== id))
+      setAllGoals(prev => prev.filter(g => g.id !== id))
       showToast('מטרה הוסרה', 'info')
     }
   }
@@ -258,14 +262,24 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
         ) : (
           patients.map(patient => (
             <Card key={patient.id}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 bg-[#c8dece] rounded-full flex items-center justify-center text-[#4a7c59] font-bold flex-shrink-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-[#c8dece] rounded-full flex items-center justify-center text-[#4a7c59] font-bold flex-shrink-0 mt-0.5">
                     {patient.full_name?.[0] ?? '?'}
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-semibold text-gray-800 truncate">{patient.full_name}</h3>
                     <p className="text-xs text-gray-400 truncate">{patient.email}</p>
+                    {allGoals.filter(g => g.patient_id === patient.id).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {allGoals.filter(g => g.patient_id === patient.id).map(g => (
+                          <span key={g.id} className="inline-flex items-center gap-1 text-xs bg-[#f5f0e8] text-[#4a7c59] rounded-full px-2 py-0.5">
+                            <span className="font-medium">{g.category}:</span>
+                            <span className="text-gray-600 max-w-[140px] truncate">{g.goal_text}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
