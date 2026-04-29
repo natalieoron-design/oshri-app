@@ -10,15 +10,21 @@ export async function GET(req: NextRequest) {
     .from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'therapist') return NextResponse.redirect(new URL('/dashboard', req.url))
 
-  const mode = req.nextUrl.searchParams.get('mode') // 'patient' | 'therapist'
-  const redirectTo = mode === 'patient' ? '/dashboard' : '/therapist'
+  const mode = req.nextUrl.searchParams.get('mode')       // 'patient' | 'therapist'
+  const patientId = req.nextUrl.searchParams.get('patient_id') // patient to impersonate
 
+  const cookieOpts = { path: '/', maxAge: 60 * 60 * 8, httpOnly: false } as const
+  const redirectTo = mode === 'patient' ? '/dashboard' : '/therapist'
   const res = NextResponse.redirect(new URL(redirectTo, req.url))
 
   if (mode === 'patient') {
-    res.cookies.set('patient_view_mode', '1', { path: '/', maxAge: 60 * 60 * 8, httpOnly: false })
+    res.cookies.set('patient_view_mode', '1', cookieOpts)
+    // If a specific patient was selected, store it; otherwise use own ID as before
+    const viewId = patientId ?? user.id
+    res.cookies.set('patient_view_id', viewId, cookieOpts)
   } else {
     res.cookies.delete('patient_view_mode')
+    res.cookies.delete('patient_view_id')
   }
 
   return res

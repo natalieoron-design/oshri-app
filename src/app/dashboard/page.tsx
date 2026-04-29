@@ -6,11 +6,14 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
 import { formatWeight } from '@/lib/utils'
+import { getViewPatientId } from '@/lib/patient-view'
 
 export default async function PatientDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
+
+  const patientId = await getViewPatientId(user.id)
 
   const today = new Date().toISOString().split('T')[0]
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
@@ -18,14 +21,14 @@ export default async function PatientDashboard() {
   const admin = createAdminClient()
 
   const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes, goalsRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('weight_logs').select('*').eq('patient_id', user.id).order('logged_at', { ascending: false }).limit(5),
-    supabase.from('food_diary').select('*').eq('patient_id', user.id).gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }),
-    supabase.from('water_intake').select('*').eq('patient_id', user.id).eq('date', today).single(),
-    supabase.from('messages').select('*').eq('recipient_id', user.id).eq('is_read', false),
-    supabase.from('ai_insights').select('*').eq('patient_id', user.id).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
-    supabase.from('patient_details').select('*').eq('patient_id', user.id).single(),
-    admin.from('treatment_goals').select('*').eq('patient_id', user.id).order('created_at', { ascending: true }),
+    supabase.from('profiles').select('*').eq('id', patientId).single(),
+    supabase.from('weight_logs').select('*').eq('patient_id', patientId).order('logged_at', { ascending: false }).limit(5),
+    supabase.from('food_diary').select('*').eq('patient_id', patientId).gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }),
+    supabase.from('water_intake').select('*').eq('patient_id', patientId).eq('date', today).single(),
+    supabase.from('messages').select('*').eq('recipient_id', patientId).eq('is_read', false),
+    supabase.from('ai_insights').select('*').eq('patient_id', patientId).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
+    supabase.from('patient_details').select('*').eq('patient_id', patientId).single(),
+    admin.from('treatment_goals').select('*').eq('patient_id', patientId).order('created_at', { ascending: true }),
   ])
 
   const profile = profileRes.data

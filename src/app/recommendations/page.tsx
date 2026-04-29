@@ -4,16 +4,19 @@ import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import { RECOMMENDATION_TYPES } from '@/lib/types'
+import { getViewPatientId } from '@/lib/patient-view'
 
 export default async function RecommendationsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const patientId = await getViewPatientId(user.id)
+
   const { data: recommendations } = await supabase
     .from('recommendations')
     .select('*')
-    .eq('patient_id', user.id)
+    .eq('patient_id', patientId)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
