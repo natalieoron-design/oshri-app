@@ -154,23 +154,6 @@ export default async function PatientDashboard() {
         </div>
       </Card>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { href: '/diary', icon: '🍽️', label: 'רשום ארוחה' },
-          { href: '/weight', icon: '⚖️', label: 'רשום משקל' },
-          { href: '/recommendations', icon: '📋', label: 'המלצות' },
-          { href: '/shop', icon: '🛍️', label: 'חנות' },
-        ].map(action => (
-          <Link key={action.href} href={action.href}>
-            <Card className="text-center hover:border-[#4a7c59]/30 transition-all">
-              <div className="text-3xl mb-2">{action.icon}</div>
-              <div className="text-sm font-medium text-gray-700">{action.label}</div>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
       {/* Treatment Goals */}
       {goals.length > 0 && (
         <Card>
@@ -190,6 +173,23 @@ export default async function PatientDashboard() {
           </div>
         </Card>
       )}
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { href: '/diary', icon: '🍽️', label: 'רשום ארוחה' },
+          { href: '/weight', icon: '⚖️', label: 'רשום משקל' },
+          { href: '/recommendations', icon: '📋', label: 'המלצות' },
+          { href: '/shop', icon: '🛍️', label: 'חנות' },
+        ].map(action => (
+          <Link key={action.href} href={action.href}>
+            <Card className="text-center hover:border-[#4a7c59]/30 transition-all">
+              <div className="text-3xl mb-2">{action.icon}</div>
+              <div className="text-sm font-medium text-gray-700">{action.label}</div>
+            </Card>
+          </Link>
+        ))}
+      </div>
 
       {/* AI Insights */}
       {insights.length > 0 && (
