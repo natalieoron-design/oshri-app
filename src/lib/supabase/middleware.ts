@@ -43,9 +43,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Role-based routing: therapist trying to access patient pages
+  // Role-based routing
   if (user) {
-    const isTherapist = user.user_metadata?.role === 'therapist'
+    // Fetch role from profiles table — user_metadata may not be set for all accounts
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isTherapist = profile?.role === 'therapist'
     const patientViewMode = request.cookies.get('patient_view_mode')?.value === '1'
 
     const patientOnlyPaths = ['/diary', '/weight', '/recommendations', '/dashboard', '/messages', '/shop']
@@ -58,7 +65,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Patient (or therapist in patient-view-mode) trying to access therapist pages → send to patient dashboard
+    // Patient trying to access therapist pages → send to patient dashboard
     const therapistOnlyPaths = ['/therapist', '/admin']
     const isTherapistPath = therapistOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
     if (!isTherapist && isTherapistPath) {
