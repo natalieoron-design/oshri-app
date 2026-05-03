@@ -10,9 +10,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // Read view-mode cookie before any Supabase calls that may mutate request.cookies
-  const patientViewMode = request.cookies.get('patient_view_mode')?.value === '1'
-
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -57,17 +54,11 @@ export async function updateSession(request: NextRequest) {
 
     const isTherapist = profile?.role === 'therapist'
 
-    const patientOnlyPaths = ['/diary', '/weight', '/recommendations', '/dashboard', '/messages', '/shop']
-    const isPatientPath = patientOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
-
-    // Therapist accessing patient pages without patient-view-mode cookie → send to therapist dashboard
-    if (isTherapist && isPatientPath && !patientViewMode) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/therapist'
-      return NextResponse.redirect(url)
-    }
-
-    // Patient trying to access therapist pages → send to patient dashboard
+    // Only protect therapist-only pages from non-therapist users.
+    // Do NOT redirect therapists away from patient pages here — the proxy runs on
+    // prefetch requests where patient_view_mode cookie may be absent, causing false
+    // redirects. The navbar already prevents therapists from navigating to patient
+    // pages outside of patient-view mode.
     const therapistOnlyPaths = ['/therapist', '/admin']
     const isTherapistPath = therapistOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
     if (!isTherapist && isTherapistPath) {
