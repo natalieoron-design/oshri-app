@@ -10,6 +10,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Read view-mode cookie before any Supabase calls that may mutate request.cookies
+  const patientViewMode = request.cookies.get('patient_view_mode')?.value === '1'
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -53,7 +56,6 @@ export async function updateSession(request: NextRequest) {
       .single()
 
     const isTherapist = profile?.role === 'therapist'
-    const patientViewMode = request.cookies.get('patient_view_mode')?.value === '1'
 
     const patientOnlyPaths = ['/diary', '/weight', '/recommendations', '/dashboard', '/messages', '/shop']
     const isPatientPath = patientOnlyPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
