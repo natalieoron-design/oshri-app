@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import DiaryClient from './DiaryClient'
 import { getViewPatientId } from '@/lib/patient-view'
@@ -9,16 +8,6 @@ export default async function DiaryPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  const cookieStore = await cookies()
-  const patientViewMode = cookieStore.get('patient_view_mode')?.value === '1'
-  if (profile?.role === 'therapist' && !patientViewMode) redirect('/therapist')
 
   const patientId = await getViewPatientId(user.id)
   const today = new Date().toISOString().split('T')[0]
