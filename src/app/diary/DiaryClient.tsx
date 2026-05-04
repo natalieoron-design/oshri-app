@@ -167,6 +167,13 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
       setPhotoPreview(null)
       setPhotoFile(null)
       showToast('הארוחה נרשמה בהצלחה', 'success')
+
+      // Update daily nutrition summary (fire-and-forget)
+      fetch('/api/nutrition-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today }),
+      }).catch(() => {})
     } catch (err) {
       console.error(err)
       showToast('שגיאה ברישום הארוחה', 'error')
@@ -190,6 +197,12 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
     await supabase.from('food_diary').delete().eq('id', id)
     setEntries(prev => prev.filter(e => e.id !== id))
     showToast('הרשומה נמחקה', 'info')
+    // Update daily nutrition summary (fire-and-forget)
+    fetch('/api/nutrition-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: today }),
+    }).catch(() => {})
   }
 
   return (

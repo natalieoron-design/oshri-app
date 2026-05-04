@@ -154,3 +154,15 @@ export const GOAL_CATEGORIES = [
 ] as const
 
 export const DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+
+export interface NutritionDailySummary {
+  id: string
+  patient_id: string
+  date: string
+  total_calories: number
+  total_protein: number
+  total_fat: number
+  total_carbs: number
+  meals_count: number
+  created_at: string
+}

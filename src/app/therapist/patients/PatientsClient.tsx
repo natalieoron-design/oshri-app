@@ -1,13 +1,14 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, PatientDetails, TreatmentGoal, GOAL_CATEGORIES } from '@/lib/types'
+import { Profile, PatientDetails, TreatmentGoal, NutritionDailySummary, GOAL_CATEGORIES } from '@/lib/types'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import Link from 'next/link'
+import NutritionHistoryChart from '@/components/ui/NutritionHistoryChart'
 
 interface Props {
   therapistId: string
@@ -53,6 +54,11 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
   const [newGoalText, setNewGoalText] = useState('')
   const [newGoalCategory, setNewGoalCategory] = useState<string>(GOAL_CATEGORIES[0])
   const [goalLoading, setGoalLoading] = useState(false)
+
+  // Nutrition chart modal
+  const [chartPatient, setChartPatient] = useState<Profile | null>(null)
+  const [chartSummaries, setChartSummaries] = useState<NutritionDailySummary[]>([])
+  const [chartLoading, setChartLoading] = useState(false)
 
   const { showToast } = useToast()
   const supabase = createClient()
@@ -141,6 +147,21 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
       setGoals(prev => prev.filter(g => g.id !== id))
       setAllGoals(prev => prev.filter(g => g.id !== id))
       showToast('מטרה הוסרה', 'info')
+    }
+  }
+
+  const openChartModal = async (patient: Profile) => {
+    setChartPatient(patient)
+    setChartSummaries([])
+    setChartLoading(true)
+    try {
+      const res = await fetch(`/api/nutrition-summary?patient_id=${patient.id}&days=30`)
+      const data = await res.json()
+      setChartSummaries(Array.isArray(data) ? data : [])
+    } catch {
+      showToast('שגיאה בטעינת נתונים', 'error')
+    } finally {
+      setChartLoading(false)
     }
   }
 
@@ -291,6 +312,9 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
                     ? <Badge variant="green">⚖️ שקל</Badge>
                     : <Badge variant="red">⚖️ לא שקל</Badge>
                   }
+                  <Button variant="outline" size="sm" onClick={() => openChartModal(patient)}>
+                    📊 גרפים
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => openPatientModal(patient)}>
                     הגדרות
                   </Button>
@@ -303,6 +327,25 @@ export default function PatientsClient({ therapistId, patients, todayLoggers, we
           ))
         )}
       </div>
+
+      {/* ── Nutrition chart modal ── */}
+      {chartPatient && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-[#4a7c59]">היסטוריית תזונה — {chartPatient.full_name}</h2>
+              <button onClick={() => setChartPatient(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+            </div>
+            {chartLoading ? (
+              <div className="flex items-center justify-center py-16 text-gray-400">
+                <span className="text-4xl animate-spin">⏳</span>
+              </div>
+            ) : (
+              <NutritionHistoryChart summaries={chartSummaries} />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Patient settings modal ── */}
       {showPatientModal && selectedPatient && (

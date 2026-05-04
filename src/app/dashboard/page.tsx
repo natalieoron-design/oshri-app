@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
 import { formatWeight } from '@/lib/utils'
 import { getViewPatientId } from '@/lib/patient-view'
+import NutritionHistoryChart from '@/components/ui/NutritionHistoryChart'
 
 export default async function PatientDashboard() {
   const supabase = await createClient()
@@ -20,7 +21,9 @@ export default async function PatientDashboard() {
 
   const admin = createAdminClient()
 
-  const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes, goalsRes] = await Promise.all([
+  const thirtyDaysAgo = new Date(Date.now() - 29 * 86400000).toISOString().split('T')[0]
+
+  const [profileRes, weightRes, diaryRes, waterRes, messagesRes, insightsRes, detailsRes, goalsRes, nutritionHistoryRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', patientId).single(),
     supabase.from('weight_logs').select('*').eq('patient_id', patientId).order('logged_at', { ascending: false }).limit(5),
     supabase.from('food_diary').select('*').eq('patient_id', patientId).gte('logged_at', weekAgo + 'T00:00:00').order('logged_at', { ascending: false }),
@@ -29,9 +32,11 @@ export default async function PatientDashboard() {
     supabase.from('ai_insights').select('*').eq('patient_id', patientId).eq('status', 'approved').order('generated_at', { ascending: false }).limit(3),
     supabase.from('patient_details').select('*').eq('patient_id', patientId).single(),
     admin.from('treatment_goals').select('*').eq('patient_id', patientId).order('created_at', { ascending: true }),
+    admin.from('nutrition_daily_summary').select('*').eq('patient_id', patientId).gte('date', thirtyDaysAgo).order('date', { ascending: true }),
   ])
 
   const profile = profileRes.data
+  const nutritionHistory = nutritionHistoryRes.data ?? []
   const weights = weightRes.data ?? []
   const diary = diaryRes.data ?? []
   const water = waterRes.data
@@ -158,6 +163,17 @@ export default async function PatientDashboard() {
             עבור ליומן תזונה ←
           </Link>
         </div>
+      </Card>
+
+      {/* Nutrition History Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>היסטוריית תזונה — 30 יום 📊</CardTitle>
+        </CardHeader>
+        <NutritionHistoryChart
+          summaries={nutritionHistory}
+          calorieGoal={details?.daily_calorie_goal ?? undefined}
+        />
       </Card>
 
       {/* Treatment Goals */}
