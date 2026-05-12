@@ -29,9 +29,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (profile.role === 'therapist') {
     const admin = createAdminClient()
     const { data: detailRows } = await admin.from('patient_details').select('patient_id')
-    const ids = detailRows?.map(r => r.patient_id) ?? []
+    // Exclude the therapist's own ID — she appears in patient_details but is not a patient
+    const ids = (detailRows?.map(r => r.patient_id) ?? []).filter(id => id !== user.id)
     if (ids.length > 0) {
-      const { data } = await admin.from('profiles').select('id,full_name,email,role,avatar_url,phone,created_at').in('id', ids)
+      const { data } = await admin.from('profiles').select('id,full_name,email,role,avatar_url,phone,created_at').in('id', ids).eq('role', 'patient')
       patients = (data ?? []) as Profile[]
     }
   }

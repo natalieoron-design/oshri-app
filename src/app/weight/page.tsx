@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import WeightClient from './WeightClient'
 import { getViewPatientId } from '@/lib/patient-view'
@@ -10,10 +11,11 @@ export default async function WeightPage() {
   if (!user) redirect('/auth/login')
 
   const patientId = await getViewPatientId(user.id)
+  const admin = createAdminClient()
 
   const [weightRes, detailsRes] = await Promise.all([
-    supabase.from('weight_logs').select('*').eq('patient_id', patientId).order('logged_at', { ascending: true }),
-    supabase.from('patient_details').select('*').eq('patient_id', patientId).single(),
+    admin.from('weight_logs').select('*').eq('patient_id', patientId).order('logged_at', { ascending: true }),
+    admin.from('patient_details').select('*').eq('patient_id', patientId).single(),
   ])
 
   return (

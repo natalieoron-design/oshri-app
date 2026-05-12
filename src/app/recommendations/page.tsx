@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -12,8 +13,9 @@ export default async function RecommendationsPage() {
   if (!user) redirect('/auth/login')
 
   const patientId = await getViewPatientId(user.id)
+  const admin = createAdminClient()
 
-  const { data: recommendations } = await supabase
+  const { data: recommendations } = await admin
     .from('recommendations')
     .select('*')
     .eq('patient_id', patientId)
