@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { WeightLog, PatientDetails } from '@/lib/types'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -24,7 +23,6 @@ export default function WeightClient({ userId, initialLogs, details }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
   const { showToast } = useToast()
-  const supabase = createClient()
 
   const latestWeight = logs[logs.length - 1]
   const firstWeight = logs[0]
@@ -51,14 +49,13 @@ export default function WeightClient({ userId, initialLogs, details }: Props) {
     }
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('weight_logs').upsert({
-        patient_id: userId,
-        weight: num,
-        logged_at: date,
-        notes: notes || null,
-      }, { onConflict: 'patient_id,logged_at' }).select().single()
-
-      if (error) throw error
+      const res = await fetch('/api/weight-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_id: userId, weight: num, logged_at: date, notes: notes || null }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
 
       setLogs(prev => {
         const filtered = prev.filter(l => l.logged_at !== date)
@@ -75,7 +72,11 @@ export default function WeightClient({ userId, initialLogs, details }: Props) {
   }
 
   const deleteLog = async (id: string) => {
-    await supabase.from('weight_logs').delete().eq('id', id)
+    await fetch('/api/weight-log', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     setLogs(prev => prev.filter(l => l.id !== id))
     showToast('הרשומה נמחקה', 'info')
   }
