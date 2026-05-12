@@ -146,21 +146,25 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
         aiResult = await analyzeWithAI({ description, inputType: 'text' })
       }
 
-      const { data, error } = await supabase.from('food_diary').insert({
-        patient_id: userId,
-        meal_type: mealType,
-        description: finalDescription,
-        input_type: inputMode,
-        photo_url: photoUrl,
-        calories: aiResult.calories,
-        protein: aiResult.protein,
-        carbs: aiResult.carbs,
-        fat: aiResult.fat,
-        fiber: aiResult.fiber,
-        ai_analysis: aiResult,
-      }).select().single()
-
-      if (error) throw error
+      const res = await fetch('/api/diary-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: userId,
+          meal_type: mealType,
+          description: finalDescription,
+          input_type: inputMode,
+          photo_url: photoUrl,
+          calories: aiResult.calories,
+          protein: aiResult.protein,
+          carbs: aiResult.carbs,
+          fat: aiResult.fat,
+          fiber: aiResult.fiber,
+          ai_analysis: aiResult,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
 
       setEntries(prev => [data, ...prev])
       setDescription('')
@@ -185,16 +189,19 @@ export default function DiaryClient({ userId, initialEntries, initialWater, insi
   const updateWater = async (newCups: number) => {
     const clamped = Math.max(0, newCups)
     setCups(clamped)
-    await supabase.from('water_intake').upsert({
-      patient_id: userId,
-      date: today,
-      cups: clamped,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'patient_id,date' })
+    await fetch('/api/water-intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: userId, date: today, cups: clamped }),
+    })
   }
 
   const deleteEntry = async (id: string) => {
-    await supabase.from('food_diary').delete().eq('id', id)
+    await fetch('/api/diary-entry', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     setEntries(prev => prev.filter(e => e.id !== id))
     showToast('הרשומה נמחקה', 'info')
     // Update daily nutrition summary (fire-and-forget)
