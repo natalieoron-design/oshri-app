@@ -71,17 +71,29 @@ export default function Navbar({
     ? patients.find(p => p.id === patientViewId) ?? { full_name: 'מטופלת' }
     : null
 
+  const selectPatient = (patientId: string) => {
+    const maxAge = 8 * 3600
+    document.cookie = `patient_view_mode=1; path=/; max-age=${maxAge}; SameSite=Lax`
+    document.cookie = `patient_view_id=${patientId}; path=/; max-age=${maxAge}; SameSite=Lax`
+    window.location.href = '/dashboard'
+  }
+
+  const exitPatientView = () => {
+    document.cookie = 'patient_view_mode=; path=/; max-age=0; SameSite=Lax'
+    document.cookie = 'patient_view_id=; path=/; max-age=0; SameSite=Lax'
+    window.location.href = '/therapist'
+  }
+
   // Patient picker dropdown (used for both entering patient view and switching while in it)
   const PatientPickerDropdown = ({ onClose }: { onClose: () => void }) => (
     <div className="absolute top-full mt-1 left-0 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[200px]">
       <p className="text-xs text-gray-400 px-3 py-1.5 font-medium">בחרי פרופיל מטופלת:</p>
       {patients.map(patient => (
-        <a
+        <button
           key={patient.id}
-          href={`/api/set-view-mode?mode=patient&patient_id=${patient.id}`}
-          onClick={onClose}
+          onClick={() => { onClose(); selectPatient(patient.id) }}
           className={cn(
-            'flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[#f5f0e8] transition-colors',
+            'w-full text-right flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-[#f5f0e8] transition-colors',
             patientViewId === patient.id ? 'text-[#4a7c59] font-semibold bg-[#f5f0e8]' : 'text-gray-700'
           )}
         >
@@ -90,7 +102,7 @@ export default function Navbar({
           </div>
           <span className="truncate">{patient.full_name}</span>
           {patientViewId === patient.id && <span className="text-[#4a7c59] mr-auto">✓</span>}
-        </a>
+        </button>
       ))}
     </div>
   )
@@ -174,13 +186,13 @@ export default function Navbar({
                       {pickerOpen && <PatientPickerDropdown onClose={() => setPickerOpen(false)} />}
                     </div>
                   )}
-                  <Link
-                    href="/api/set-view-mode?mode=therapist"
+                  <button
+                    onClick={exitPatientView}
                     className="flex items-center gap-1.5 text-xs bg-white text-[#4a7c59] font-semibold px-3 py-1.5 rounded-lg hover:bg-[#c8dece] transition-colors"
                   >
                     <span>🔙</span>
                     <span>מצב מטפלת</span>
-                  </Link>
+                  </button>
                 </div>
               ) : (
                 /* Enter patient view — show picker if patients exist */
@@ -197,13 +209,13 @@ export default function Navbar({
                     {pickerOpen && <PatientPickerDropdown onClose={() => setPickerOpen(false)} />}
                   </div>
                 ) : (
-                  <Link
-                    href="/api/set-view-mode?mode=patient"
+                  <button
+                    onClick={() => selectPatient(profile.id)}
                     className="hidden md:flex items-center gap-1.5 text-xs bg-white/15 hover:bg-white/25 text-white font-medium px-3 py-1.5 rounded-lg transition-colors border border-white/30"
                   >
                     <span>👁️</span>
                     <span>מצב מטופל</span>
-                  </Link>
+                  </button>
                 )
               )
             )}
@@ -295,12 +307,11 @@ export default function Navbar({
               patientViewMode ? (
                 <>
                   {patients.map(patient => (
-                    <a
+                    <button
                       key={patient.id}
-                      href={`/api/set-view-mode?mode=patient&patient_id=${patient.id}`}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => { setMenuOpen(false); selectPatient(patient.id) }}
                       className={cn(
-                        'px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2',
+                        'w-full text-right px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2',
                         patientViewId === patient.id
                           ? 'bg-white/20 text-white font-semibold'
                           : 'text-white/80 hover:bg-white/10'
@@ -308,34 +319,31 @@ export default function Navbar({
                     >
                       👤 {patient.full_name}
                       {patientViewId === patient.id && ' ✓'}
-                    </a>
+                    </button>
                   ))}
-                  <Link
-                    href="/api/set-view-mode?mode=therapist"
-                    onClick={() => setMenuOpen(false)}
+                  <button
+                    onClick={() => { setMenuOpen(false); exitPatientView() }}
                     className="mt-1 px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 transition-colors flex items-center gap-2"
                   >
                     🔙 חזרי למצב מטפלת
-                  </Link>
+                  </button>
                 </>
               ) : (
                 patients.length > 0 ? patients.map(patient => (
-                  <a
+                  <button
                     key={patient.id}
-                    href={`/api/set-view-mode?mode=patient&patient_id=${patient.id}`}
-                    onClick={() => setMenuOpen(false)}
-                    className="px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 transition-colors flex items-center gap-2"
+                    onClick={() => { setMenuOpen(false); selectPatient(patient.id) }}
+                    className="w-full text-right px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 transition-colors flex items-center gap-2"
                   >
                     👁️ מצב מטופל: {patient.full_name}
-                  </a>
+                  </button>
                 )) : (
-                  <Link
-                    href="/api/set-view-mode?mode=patient"
-                    onClick={() => setMenuOpen(false)}
+                  <button
+                    onClick={() => { setMenuOpen(false); selectPatient('') }}
                     className="mt-1 px-3 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/90 hover:bg-white/20 transition-colors flex items-center gap-2"
                   >
                     👁️ עברי למצב מטופל
-                  </Link>
+                  </button>
                 )
               )
             )}
@@ -347,9 +355,9 @@ export default function Navbar({
       {isTherapist && patientViewMode && (
         <div className="bg-amber-500 text-white text-xs text-center py-1.5 font-medium">
           👁️ את צופה כ־<strong>{currentPatient?.full_name ?? 'מטופלת'}</strong> —{' '}
-          <Link href="/api/set-view-mode?mode=therapist" className="underline font-bold hover:text-amber-100">
+          <button onClick={exitPatientView} className="underline font-bold hover:text-amber-100">
             חזרי למצב מטפלת
-          </Link>
+          </button>
         </div>
       )}
     </nav>
