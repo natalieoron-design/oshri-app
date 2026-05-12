@@ -12,21 +12,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
+  console.log('[send-recommendation-email] called | patientEmail:', patientEmail, '| RESEND_API_KEY set:', !!process.env.RESEND_API_KEY)
+
   if (!process.env.RESEND_API_KEY) {
-    // Email not configured — log and return ok so the UI isn't blocked
     console.warn('[send-recommendation-email] RESEND_API_KEY not set, skipping email')
     return NextResponse.json({ ok: true, skipped: true })
   }
 
   try {
-    await sendNewRecommendationEmail({
+    const result = await sendNewRecommendationEmail({
       patientEmail,
       patientName,
       recommendationCount: recommendationCount ?? 1,
     })
+    console.log('[send-recommendation-email] Resend result:', JSON.stringify(result))
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[send-recommendation-email] error:', err)
-    return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
