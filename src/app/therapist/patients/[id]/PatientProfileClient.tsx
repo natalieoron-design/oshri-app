@@ -68,6 +68,17 @@ export default function PatientProfileClient({ therapistId, patient, diary, weig
       setRecContent('')
       setShowAddRec(false)
       showToast('המלצה נוספה', 'success')
+
+      // Send email notification to patient (fire-and-forget)
+      fetch('/api/send-recommendation-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientEmail: patient.email,
+          patientName: patient.full_name ?? 'מטופלת',
+          recommendationCount: 1,
+        }),
+      }).catch(() => {})
     } catch {
       showToast('שגיאה בהוספת המלצה', 'error')
     } finally {
