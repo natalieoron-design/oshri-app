@@ -10,7 +10,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
-  // Read patient-view cookies and inject them as request headers so Server
+  // Read patient-view cookies and inject them as a request header so Server
   // Components receive them reliably (custom cookies can get dropped when
   // supabaseResponse is recreated inside setAll).
   const patientViewMode = request.cookies.get('patient_view_mode')?.value
@@ -21,9 +21,10 @@ export async function updateSession(request: NextRequest) {
   } else {
     requestHeaders.delete('x-patient-view-id')
   }
-  const modifiedRequest = new Request(request, { headers: requestHeaders })
 
-  let supabaseResponse = NextResponse.next({ request: modifiedRequest })
+  let supabaseResponse = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -34,7 +35,9 @@ export async function updateSession(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value)
         )
-        supabaseResponse = NextResponse.next({ request: modifiedRequest })
+        supabaseResponse = NextResponse.next({
+          request: { headers: requestHeaders },
+        })
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)
         )
