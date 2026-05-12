@@ -123,18 +123,34 @@ export default function Navbar({
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {links.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
-                  pathname === link.href || pathname.startsWith(link.href + '/')
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
-                )}
-              >
-                {link.label}
-              </Link>
+              patientViewMode ? (
+                // Hard navigation in patient-view to bypass Next.js router cache
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
+                    pathname === link.href || pathname.startsWith(link.href + '/')
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
+                    pathname === link.href || pathname.startsWith(link.href + '/')
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
           </div>
 
@@ -235,19 +251,34 @@ export default function Navbar({
         {menuOpen && (
           <div className="md:hidden pb-3 flex flex-col gap-1">
             {links.map(link => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                  pathname === link.href
-                    ? 'bg-white/20 text-white'
-                    : 'text-white/80 hover:bg-white/10'
-                )}
-              >
-                {link.label}
-              </Link>
+              patientViewMode ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    pathname === link.href
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10'
+                  )}
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    pathname === link.href
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/80 hover:bg-white/10'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
 
             {isTherapist && !patientViewMode && (
