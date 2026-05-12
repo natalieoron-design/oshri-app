@@ -11,6 +11,7 @@ export default async function WeightPage() {
   if (!user) redirect('/auth/login')
 
   const patientId = await getViewPatientId(user.id)
+  console.log('[weight/page] patientId:', patientId, '| user.id:', user.id)
   const admin = createAdminClient()
 
   const [weightRes, detailsRes] = await Promise.all([
