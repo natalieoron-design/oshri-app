@@ -12,8 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
-  const resendKeys = Object.keys(process.env).filter(k => k.toUpperCase().includes('RESEND'))
-  console.log('[send-recommendation-email] called | patientEmail:', patientEmail, '| RESEND_API_KEY:', !!process.env.RESEND_API_KEY, '| matching env keys:', resendKeys)
+  console.log('[send-recommendation-email] RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length ?? 'undefined', '| starts with re_:', process.env.RESEND_API_KEY?.startsWith('re_'))
 
   if (!process.env.RESEND_API_KEY) {
     console.warn('[send-recommendation-email] RESEND_API_KEY not set, skipping email')
