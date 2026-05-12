@@ -13,10 +13,15 @@ export default async function WeightPage() {
   const patientId = await getViewPatientId(user.id)
   const admin = createAdminClient()
 
+  console.log('[weight/page] user.id:', user.id, '| patientId:', patientId, '| same?', user.id === patientId)
+
   const [weightRes, detailsRes] = await Promise.all([
     admin.from('weight_logs').select('*').eq('patient_id', patientId).order('logged_at', { ascending: true }),
     admin.from('patient_details').select('*').eq('patient_id', patientId).single(),
   ])
+
+  console.log('[weight/page] weightRes rows:', weightRes.data?.length ?? 0, '| error:', weightRes.error?.message ?? 'none')
+  console.log('[weight/page] first log sample:', JSON.stringify(weightRes.data?.[0] ?? null))
 
   return (
     <WeightClient
