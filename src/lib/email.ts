@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM = process.env.EMAIL_FROM ?? 'אושרי הרץ - נטורופתית <noreply@oshrihertz.co.il>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://oshri-app.vercel.app'
 
@@ -82,6 +80,7 @@ export async function sendNewRecommendationEmail({
 </body>
 </html>`
 
+  const resend = new Resend(process.env.RESEND_API_KEY)
   return resend.emails.send({
     from: FROM,
     to: patientEmail,
