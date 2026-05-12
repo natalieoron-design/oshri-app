@@ -23,6 +23,7 @@ export default async function DiaryPage() {
 
   return (
     <DiaryClient
+      key={patientId}
       userId={patientId}
       initialEntries={diaryRes.data ?? []}
       initialWater={waterRes.data}
