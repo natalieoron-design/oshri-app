@@ -53,6 +53,7 @@ export default function PatientProfileClient({ therapistId, patient, diary, weig
   const addRecommendation = async () => {
     if (!recTitle || !recContent) return
     setRecLoading(true)
+    let insertedOk = false
     try {
       const { data, error } = await supabase.from('recommendations').insert({
         patient_id: patient.id,
@@ -63,14 +64,22 @@ export default function PatientProfileClient({ therapistId, patient, diary, weig
       }).select().single()
 
       if (error) throw error
+      insertedOk = true
       setRecs(prev => [data, ...prev])
       setRecTitle('')
       setRecContent('')
       setShowAddRec(false)
       showToast('המלצה נוספה', 'success')
+    } catch (err) {
+      console.error('[addRecommendation] insert error:', err)
+      showToast('שגיאה בהוספת המלצה', 'error')
+    } finally {
+      setRecLoading(false)
+    }
 
-      // Send email notification to patient
-      console.log('[addRecommendation] sending email to:', patient.email)
+    // Send email outside try/catch so insert errors don't swallow it
+    if (insertedOk) {
+      console.log('[addRecommendation] insert succeeded, sending email to:', patient.email)
       fetch('/api/send-recommendation-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,10 +91,8 @@ export default function PatientProfileClient({ therapistId, patient, diary, weig
       })
         .then(r => r.json().then(body => console.log('[addRecommendation] email API response:', r.status, body)))
         .catch(err => console.error('[addRecommendation] email fetch error:', err))
-    } catch {
-      showToast('שגיאה בהוספת המלצה', 'error')
-    } finally {
-      setRecLoading(false)
+    } else {
+      console.warn('[addRecommendation] insert failed — skipping email')
     }
   }
 
