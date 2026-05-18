@@ -65,6 +65,7 @@ export interface Recommendation {
   content: string
   is_active: boolean
   created_at: string
+  seen_at: string | null
 }
 
 export interface AiInsight {

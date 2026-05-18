@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import { RECOMMENDATION_TYPES } from '@/lib/types'
 import { getViewPatientId } from '@/lib/patient-view'
+import RecommendationsViewed from './RecommendationsViewed'
 
 export default async function RecommendationsPage() {
   const supabase = await createClient()
@@ -38,6 +39,7 @@ export default async function RecommendationsPage() {
 
   return (
     <div className="space-y-6">
+      <RecommendationsViewed patientId={patientId} />
       <h1 className="text-2xl font-bold text-[#4a7c59]">המלצות המטפלת 📋</h1>
 
       {!recommendations?.length && (

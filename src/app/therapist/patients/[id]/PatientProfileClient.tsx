@@ -324,6 +324,11 @@ export default function PatientProfileClient({ therapistId, patient, diary, weig
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Badge variant="green">{RECOMMENDATION_TYPES[rec.type]}</Badge>
+                      {rec.seen_at && (
+                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                          נצפה {new Date(rec.seen_at).toLocaleDateString('he-IL')}
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-semibold text-gray-800">{rec.title}</h3>
                     <p className="text-sm text-gray-600 mt-1 leading-relaxed">{rec.content}</p>
