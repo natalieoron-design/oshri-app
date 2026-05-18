@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -20,7 +21,9 @@ export default async function TherapistDashboard() {
   const { data: patientDetailsData } = await supabase.from('patient_details').select('patient_id')
   const patientIds = patientDetailsData?.map(r => r.patient_id) ?? []
 
-  const [patientsRes, todayDiaryRes, weekWeightRes, pendingInsightsRes, unreadMsgRes, ordersRes] = await Promise.all([
+  const admin = createAdminClient()
+
+  const [patientsRes, todayDiaryRes, weekWeightRes, pendingInsightsRes, unreadMsgRes, ordersRes, seenRecsRes] = await Promise.all([
     patientIds.length > 0
       ? supabase.from('profiles').select('*').in('id', patientIds).order('full_name')
       : Promise.resolve({ data: [] }),
@@ -29,6 +32,9 @@ export default async function TherapistDashboard() {
     supabase.from('ai_insights').select('*').eq('status', 'pending').order('generated_at', { ascending: false }),
     supabase.from('messages').select('*').eq('recipient_id', user.id).eq('is_read', false),
     supabase.from('orders').select('*, profiles(full_name)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
+    patientIds.length > 0
+      ? admin.from('recommendations').select('patient_id, seen_at').in('patient_id', patientIds).not('seen_at', 'is', null).order('seen_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
   ])
 
   const patients = (patientsRes.data ?? []) as import('@/lib/types').Profile[]
@@ -41,6 +47,21 @@ export default async function TherapistDashboard() {
   const loggedToday = patients.filter(p => todayLoggers.has(p.id))
   const notLoggedToday = patients.filter(p => !todayLoggers.has(p.id))
   const didntWeighIn = patients.filter(p => !weekWeighters.has(p.id))
+
+  // Seen recommendations stats
+  const seenRecs = seenRecsRes.data ?? []
+  const seenToday = seenRecs.filter(r => r.seen_at?.startsWith(today)).length
+  // Most recent seen_at per patient
+  const latestSeenByPatient = new Map<string, string>()
+  for (const r of seenRecs) {
+    const existing = latestSeenByPatient.get(r.patient_id)
+    if (!existing || r.seen_at > existing) latestSeenByPatient.set(r.patient_id, r.seen_at)
+  }
+  const recentViewers = patients
+    .filter(p => latestSeenByPatient.has(p.id))
+    .map(p => ({ ...p, lastSeen: latestSeenByPatient.get(p.id)! }))
+    .sort((a, b) => b.lastSeen.localeCompare(a.lastSeen))
+    .slice(0, 5)
 
   return (
     <div className="space-y-6">
@@ -69,14 +90,12 @@ export default async function TherapistDashboard() {
           </div>
           <div className="text-xs text-gray-500 mt-1">לא רשמו היום</div>
         </Card>
-        <Link href="/therapist/insights">
-          <Card className="text-center hover:border-[#4a7c59]/30">
-            <div className={`text-3xl font-bold ${pendingInsights.length > 0 ? 'text-orange-500' : 'text-[#4a7c59]'}`}>
-              {pendingInsights.length}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">תובנות ממתינות</div>
-          </Card>
-        </Link>
+        <Card className="text-center">
+          <div className={`text-3xl font-bold ${seenToday > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+            {seenToday}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">צפו בהמלצות היום</div>
+        </Card>
       </div>
 
       {/* Alerts */}
@@ -147,6 +166,30 @@ export default async function TherapistDashboard() {
           )}
         </Card>
       </div>
+
+      {/* Recently viewed recommendations */}
+      {recentViewers.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>צפו בהמלצות לאחרונה 👁️</CardTitle></CardHeader>
+          <div className="space-y-2">
+            {recentViewers.map(p => {
+              const seenDate = new Date(p.lastSeen)
+              const isToday = p.lastSeen.startsWith(today)
+              const label = isToday
+                ? `היום ${seenDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`
+                : seenDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })
+              return (
+                <Link key={p.id} href={`/therapist/patients/${p.id}`}>
+                  <div className="flex items-center justify-between bg-blue-50 rounded-xl px-3 py-2 hover:bg-blue-100 transition-colors">
+                    <span className="text-sm font-medium text-gray-700">{p.full_name}</span>
+                    <span className="text-xs text-blue-600">{label}</span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Didn't weigh in */}
       {didntWeighIn.length > 0 && (
